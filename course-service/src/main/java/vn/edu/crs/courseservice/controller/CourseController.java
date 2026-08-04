@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/course")
+@RequestMapping("/courses")
 
 public class CourseController {
 
