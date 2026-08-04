@@ -21,10 +21,10 @@ public class Course {
     private String tenMonHoc;
 
     @Column(name = "so_tin_chi", nullable = false)
-    private String soTinchi;
+    private String soTinChi;
 
     @Column(name = "so_cho_toi_da", nullable = false)
-    private Integer soToiDa;
+    private Integer soChoToiDa;
 
     @Column(name = "so_cho_con_lai", nullable = false)
     private Integer soChoConLai;
