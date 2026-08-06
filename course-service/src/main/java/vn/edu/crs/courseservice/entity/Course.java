@@ -21,7 +21,7 @@ public class Course {
     private String tenMonHoc;
 
     @Column(name = "so_tin_chi", nullable = false)
-    private String soTinChi;
+    private Integer soTinChi;
 
     @Column(name = "so_cho_toi_da", nullable = false)
     private Integer soChoToiDa;
