@@ -9,6 +9,9 @@ import vn.edu.crs.courseservice.service.CourseService;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 @RestController
 @RequestMapping("/courses")
 @RequiredArgsConstructor
@@ -17,8 +20,11 @@ public class CourseController {
     private final CourseService courseService;
 
     @GetMapping
-    public List<CourseDTO> getAll() {
-        return courseService.getAll();
+    public Page<CourseDTO> search(
+            @RequestParam(required = false) String keyword,
+            Pageable pageable
+    ) {
+        return courseService.search(keyword, pageable);
     }
 
     @GetMapping("/{id}")

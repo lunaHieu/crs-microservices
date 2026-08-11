@@ -28,4 +28,6 @@ public class Course {
 
     @Column(name = "so_cho_con_lai", nullable = false)
     private Integer soChoConLai;
+
+
 }
