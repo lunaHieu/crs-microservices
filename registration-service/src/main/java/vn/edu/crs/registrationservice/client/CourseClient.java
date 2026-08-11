@@ -31,7 +31,7 @@ public class CourseClient {
                     Void.class
             );
         } catch (HttpClientErrorException.NotFound ex) {
-            throw new IllegalArgumentException("Khong tim thay mon hoc id = " + courseId);
+            throw new IllegalStateException("Mon hoc khong ton tai");
         } catch (HttpClientErrorException.Conflict ex) {
             throw new IllegalStateException("Mon hoc da het cho, khong the dang ky");
         } catch (ResourceAccessException ex) {
@@ -53,7 +53,7 @@ public class CourseClient {
                     Void.class
             );
         } catch (HttpClientErrorException.NotFound ex) {
-            throw new IllegalArgumentException("Khong tim thay mon hoc id = " + courseId);
+            throw new IllegalStateException("Mon hoc khong ton tai");
         } catch (ResourceAccessException ex) {
             throw new IllegalStateException("Khong the ket noi den course-service");
         }
