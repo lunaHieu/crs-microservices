@@ -33,45 +33,7 @@ Hệ thống Đăng ký Học phần (**Course Registration System - CRS**) đư
 
 Hệ thống bao gồm **1 ứng dụng Frontend (React SPA)**, **4 microservices Backend** và **3 cơ sở dữ liệu MySQL độc lập**. Tất cả các truy cập từ người dùng (Frontend SPA, Mobile, Postman) và Đối tác tích hợp (Partner) đều đi qua **API Gateway** (Cổng 8080) làm điểm truy cập duy nhất (**Single Entry Point**).
 
-```mermaid
-graph TD
-    subgraph Client Layer
-        Web["Frontend SPA (React + Vite)<br/>Port: 5173"]
-        Postman["Client / Postman / Mobile"]
-        Partner["Đối tác (Partner App)"]
-    end
 
-    subgraph Gateway Layer
-        Gateway["API Gateway (Spring Cloud Gateway WebFlux)<br/>Port: 8080"]
-    end
-
-    subgraph Backend Microservices Layer
-        Auth["Auth Service<br/>Port: 8081"]
-        Course["Course Service<br/>Port: 8082"]
-        Reg["Registration Service<br/>Port: 8083"]
-    end
-
-    subgraph Database Layer (Pattern: Database per Service)
-        AuthDB[("MySQL: auth_db")]
-        CourseDB[("MySQL: course_db")]
-        RegDB[("MySQL: registration_db")]
-    end
-
-    Web -->|HTTP / REST (CORS)| Gateway
-    Postman -->|HTTP / REST| Gateway
-    Partner -->|HTTP (X-API-KEY)| Gateway
-
-    Gateway -->|/api/auth/**| Auth
-    Gateway -->|/api/courses/**| Course
-    Gateway -->|/api/public/courses| Course
-    Gateway -->|/api/registrations/**| Reg
-
-    Reg -->|HTTP Direct PATCH /internal/courses/...| Course
-
-    Auth --> AuthDB
-    Course --> CourseDB
-    Reg --> RegDB
-```
 
 ---
 
