@@ -1,39 +1,55 @@
-import { useEffect, useState } from 'react';
-import { getCourses } from './api/courseApi';
-import type { Course } from './types/course';
+import { useCallback, useState } from 'react';
+import { useCourses } from './api/useCourses';
+import SearchBox from './components/SearchBox';
+import CourseList from './components/CourseList';
+import Pagination from './components/Pagination';
 
 function App() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [error, setError] = useState<string | null>(null);
+    const [keyword, setKeyword] = useState('');
+    const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    getCourses()
-        .then((res) => {
-          setCourses(res.data.content);
-        })
-        .catch((err) => {
-          console.error(err);
-          setError(
-              'Khong ket noi duoc toi he thong. Kiem tra lai api-gateway da chay chua.'
-          );
-        });
-  }, []);
+    const {
+        courses,
+        totalPages,
+        state,
+        errorMessage,
+        refetch,
+    } = useCourses(keyword, page);
 
-  return (
-      <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-        <h1>Kiem tra ket noi CRS qua Gateway</h1>
+    const handleSearch = useCallback((newKeyword: string) => {
+        setKeyword(newKeyword);
+        setPage(0);
+    }, []);
 
-        {error && (
-            <p style={{ color: 'red' }}>
-              {error}
-            </p>
-        )}
+    return (
+        <div
+            style={{
+                padding: 24,
+                fontFamily: 'sans-serif',
+                maxWidth: 800,
+                margin: '0 auto',
+            }}
+        >
+            <h1>Danh sach mon hoc</h1>
 
-        <pre>
-        {JSON.stringify(courses, null, 2)}
-      </pre>
-      </div>
-  );
+            <SearchBox onSearch={handleSearch} />
+
+            <div style={{ marginTop: 16 }}>
+                <CourseList
+                    courses={courses}
+                    state={state}
+                    errorMessage={errorMessage}
+                    onRetry={refetch}
+                />
+            </div>
+
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+            />
+        </div>
+    );
 }
 
 export default App;
