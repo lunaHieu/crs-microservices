@@ -2,6 +2,7 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { LoginResponse } from '../types/auth';
 
 interface AuthUser {
+    id: number;
     username: string;
     role: LoginResponse['role'];
 }
@@ -24,12 +25,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (savedUser && savedToken) {
             try {
-                return JSON.parse(savedUser) as AuthUser;
+                const parsedUser = JSON.parse(savedUser) as AuthUser;
+                if (typeof parsedUser.id === 'number') {
+                    return parsedUser;
+                }
             } catch {
                 localStorage.removeItem(USER_KEY);
                 localStorage.removeItem(TOKEN_KEY);
                 return null;
             }
+
+            localStorage.removeItem(USER_KEY);
+            localStorage.removeItem(TOKEN_KEY);
 
         }
 
@@ -38,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = (data: LoginResponse) => {
         const authUser: AuthUser = {
+            id: data.userId,
             username: data.username,
             role: data.role,
         };
