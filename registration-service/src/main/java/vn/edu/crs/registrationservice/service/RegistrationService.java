@@ -53,6 +53,10 @@ public class RegistrationService {
         return registrationRepository.findByStudentId(studentId);
     }
 
+    public List<Registration> getMyRegistrations(Long studentId) {
+        return registrationRepository.findByStudentId(studentId);
+    }
+
     @Transactional
     public Registration cancel(Long registrationId) {
 
