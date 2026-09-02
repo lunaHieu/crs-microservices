@@ -23,9 +23,10 @@ Hệ thống Đăng ký Học phần (**Course Registration System - CRS**) đư
 8. [Giao tiếp nội bộ giữa các Service (Inter-Service Communication)](#giao-tiếp-nội-bộ-giữa-các-service-inter-service-communication)
 9. [Cấu hình Môi trường (.env)](#cấu-hình-môi-trường-env)
 10. [Hướng dẫn Cài đặt & Khởi chạy (Local Development)](#hướng-dẫn-cài-đặt--khởi-chạy-local-development)
-11. [Dữ liệu Khởi tạo & Tài khoản Mẫu](#dữ-liệu-khởi-tạo--tài-khoản-mẫu)
-12. [Kịch bản Kiểm thử Hệ thống (Test Scenarios)](#kịch-bản-kiểm-thử-hệ-thống-test-scenarios)
-13. [Trạng thái Phát triển & Kế hoạch Tương lai](#trạng-thái-phát-triển--kế-hoạch-tương-lai)
+11. [Chạy bằng Docker Compose](#chạy-bằng-docker-compose)
+12. [Dữ liệu Khởi tạo & Tài khoản Mẫu](#dữ-liệu-khởi-tạo--tài-khoản-mẫu)
+13. [Kịch bản Kiểm thử Hệ thống (Test Scenarios)](#kịch-bản-kiểm-thử-hệ-thống-test-scenarios)
+14. [Trạng thái Phát triển & Kế hoạch Tương lai](#trạng-thái-phát-triển--kế-hoạch-tương-lai)
 
 ---
 
@@ -360,6 +361,24 @@ Sau khi khởi chạy thành công, truy cập trình duyệt tại: **`http://l
 
 ---
 
+## Chạy bằng Docker Compose
+
+Docker Compose khởi động 5 thành phần ứng dụng và 3 MySQL độc lập. Các service gọi nhau bằng tên container (`auth-service`, `course-service`, `registration-service`) thay cho `localhost`; cấu hình local vẫn dùng các giá trị mặc định trong `application.properties` và `application.yml`.
+
+1. Đảm bảo Docker Desktop đang chạy và file `.env` ở thư mục gốc có `DB_PASSWORD` cùng `JWT_SECRET`.
+2. Dừng các service đang chạy trực tiếp trên các port `8080`-`8083` và frontend port `5173`.
+3. Tại thư mục gốc, chạy:
+
+   ```bash
+   docker compose up --build
+   ```
+
+4. Mở `http://localhost:5173`. Trong chế độ Docker, Gateway được mở ở `http://localhost:18080` (cổng nội bộ vẫn là `8080`); ba MySQL chỉ chạy trong mạng Docker nội bộ và được các service gọi qua tên `mysql-auth`, `mysql-course`, `mysql-registration`.
+
+Để dừng hệ thống, dùng `docker compose down`. Thêm `-v` chỉ khi muốn xóa cả dữ liệu MySQL đã lưu trong volumes.
+
+---
+
 ## Dữ liệu Khởi tạo & Tài khoản Mẫu
 
 Khi `auth-service` khởi động, `DataSeeder` sẽ tự động tạo sẵn 2 tài khoản mẫu phục vụ kiểm thử:
@@ -440,5 +459,4 @@ Dưới đây là các test case mẫu kiểm thử đầy đủ các luồng b�
 - [ ] Xây dựng hoàn thiện các trang giao diện Frontend: Đăng nhập/Đăng xuất, Danh sách môn học, Bảng điều khiển Đăng ký học phần của sinh viên, Trang quản trị môn học của Admin.
 - [ ] Chuyển đổi giao tiếp liên dịch vụ sang Asynchronous Event-Driven sử dụng **Apache Kafka** hoặc **RabbitMQ**.
 - [ ] Áp dụng **Resilience4j** (Circuit Breaker, Retry, Rate Limiting) tại API Gateway và Registration Service.
-- [ ] Đóng gói toàn bộ hệ thống bằng **Docker & Docker Compose** phục vụ triển khai một lệnh (`docker-compose up`).
-
+- [x] Đóng gói toàn bộ hệ thống bằng **Docker & Docker Compose** phục vụ triển khai một lệnh (`docker compose up --build`).
