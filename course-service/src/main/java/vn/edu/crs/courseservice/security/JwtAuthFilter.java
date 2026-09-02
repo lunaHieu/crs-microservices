@@ -33,7 +33,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
 
             String token = authHeader.substring(7);
@@ -51,7 +50,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 String username = claims.getSubject();
                 String role = claims.get("role", String.class);
-                Long userId = claims.get("userId", Long.class);
+                Object rawUserId = claims.get("userId");
+                Long userId = rawUserId instanceof Number
+                        ? ((Number) rawUserId).longValue()
+                        : rawUserId == null ? null : Long.valueOf(rawUserId.toString());
 
                 var authToken =
                         new UsernamePasswordAuthenticationToken(
@@ -67,7 +69,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder
                         .getContext()
                         .setAuthentication(authToken);
-
             } catch (Exception e) {
                 SecurityContextHolder.clearContext();
             }

@@ -8,7 +8,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.HttpStatusAccessDeniedHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import vn.edu.crs.courseservice.security.JwtAuthFilter;
@@ -66,7 +65,8 @@ public class SecurityConfig {
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
                         )
                         .accessDeniedHandler(
-                                new HttpStatusAccessDeniedHandler(HttpStatus.FORBIDDEN)
+                                (request, response, denied) ->
+                                        response.setStatus(HttpStatus.FORBIDDEN.value())
                         )
                 )
 
