@@ -2,6 +2,7 @@ package vn.edu.crs.apigateway.filter;
 
 import vn.edu.crs.apigateway.cache.ApiKeyValidationCache;
 import vn.edu.crs.apigateway.client.AuthServiceClient;
+import vn.edu.crs.apigateway.ratelimit.ApiKeyRateLimiter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -20,13 +21,16 @@ public class ApiKeyFilter implements GlobalFilter, Ordered {
 
     private final AuthServiceClient authServiceClient;
     private final ApiKeyValidationCache cache;
+    private final ApiKeyRateLimiter rateLimiter;
 
     public ApiKeyFilter(
             AuthServiceClient authServiceClient,
-            ApiKeyValidationCache cache
+            ApiKeyValidationCache cache,
+            ApiKeyRateLimiter rateLimiter
     ) {
         this.authServiceClient = authServiceClient;
         this.cache = cache;
+        this.rateLimiter = rateLimiter;
     }
     @Override
     public Mono<Void> filter(
@@ -52,7 +56,9 @@ public class ApiKeyFilter implements GlobalFilter, Ordered {
         Boolean cached = cache.get(cacheKey);
 
         if (cached != null) {
-            return cached ? chain.filter(exchange) : reject(exchange);
+            return cached
+                    ? applyRateLimit(exchange, chain, apiKey)
+                    : reject(exchange);
         }
 
         return authServiceClient
@@ -60,9 +66,31 @@ public class ApiKeyFilter implements GlobalFilter, Ordered {
                 .flatMap(valid -> {
                     cache.put(cacheKey, valid);
                     return valid
-                            ? chain.filter(exchange)
+                            ? applyRateLimit(exchange, chain, apiKey)
                             : reject(exchange);
                 });
+    }
+
+    private Mono<Void> applyRateLimit(
+            ServerWebExchange exchange,
+            GatewayFilterChain chain,
+            String apiKey
+    ) {
+        ApiKeyRateLimiter.RateLimitResult result = rateLimiter.tryConsume(apiKey);
+
+        exchange.getResponse().getHeaders()
+                .set("X-RateLimit-Limit", String.valueOf(result.maxRequests()));
+        exchange.getResponse().getHeaders()
+                .set("X-RateLimit-Remaining", String.valueOf(result.remainingRequests()));
+
+        if (result.allowed()) {
+            return chain.filter(exchange);
+        }
+
+        exchange.getResponse().getHeaders()
+                .set("Retry-After", String.valueOf(result.retryAfterSeconds()));
+        exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+        return exchange.getResponse().setComplete();
     }
 
     private String getRequiredScope(String path) {

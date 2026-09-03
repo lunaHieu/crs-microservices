@@ -89,6 +89,11 @@ jwt:
 auth-service:
   base-url: ${AUTH_SERVICE_BASE_URL:http://localhost:8081}
 
+partner:
+  rate-limit:
+    max-requests: ${PARTNER_RATE_LIMIT_MAX_REQUESTS:5}
+    window-seconds: ${PARTNER_RATE_LIMIT_WINDOW_SECONDS:60}
+
 management:
   endpoints:
     web:

@@ -456,6 +456,7 @@ Dưới đây là các test case mẫu kiểm thử đầy đủ các luồng b�
 - [x] Mô hình **Bảo mật 2 Tầng** (Gateway sơ kiểm header & Service tự thẩm định JWT).
 - [x] Cơ chế phân quyền **RBAC** tại các Business Services.
 - [x] Bảo mật endpoint đối tác bằng **X-API-KEY Filter**.
+- [x] Giới hạn lưu lượng theo từng API Key tại Gateway (mặc định 5 request/phút/key, trả `429 Too Many Requests` khi vượt ngưỡng).
 - [x] Tích hợp gọi nội bộ liên dịch vụ qua **HTTP REST** (`RestTemplate`) để tự động giữ/trả chỗ.
 - [x] Khởi tạo ứng dụng **Frontend SPA** (Vite + React 19 + TypeScript + Axios Client).
 
