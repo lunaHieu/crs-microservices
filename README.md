@@ -43,8 +43,8 @@ Hệ thống bao gồm **1 ứng dụng Frontend (React SPA)**, **4 microservice
 | Thành phần / Service | Vai trò | Port | Database | Trách nhiệm chính |
 | :--- | :---: | :---: | :---: | :--- |
 | **`crs-frontend`** | Frontend Web SPA | `5173` | *(LocalStorage)* | Giao diện người dùng (React 19 + TypeScript + Vite), gọi API qua Gateway `:8080`, hiển thị danh sách môn học, tương tác xác thực và đăng ký. |
-| **`api-gateway`** | API Gateway | `8080` | *(Không DB)* | Điểm truy cập duy nhất, RewritePath routing, cấu hình CORS WebFlux cho Frontend, lọc Auth sơ bộ (AuthHeaderFilter), kiểm tra Partner API Key (ApiKeyFilter). |
-| **`auth-service`** | Authentication & User | `8081` | `auth_db` | Quản lý người dùng (`User`, `Student`), mã hóa mật khẩu BCrypt, seed dữ liệu mẫu, đăng nhập (`POST /auth/login`), phát hành JWT Token mang claim `username` & `role`. |
+| **`api-gateway`** | API Gateway | `8080` | *(Không DB)* | Điểm truy cập duy nhất, RewritePath routing, CORS WebFlux, lọc Authorization sơ bộ và kiểm tra API Key động theo scope có cache 30 giây. |
+| **`auth-service`** | Authentication & User | `8081` | `auth_db` | Quản lý người dùng và API Key đối tác, mã hóa BCrypt, đăng nhập JWT, cấp/thu hồi key và kiểm tra scope nội bộ. |
 | **`course-service`** | Course Management | `8082` | `course_db` | Quản lý môn học (CRUD, tìm kiếm theo từ khóa, phân trang), tự xác thực JWT & RBAC (chỉ `ADMIN` có quyền thêm/sửa/xóa), cung cấp API nội bộ điều phối chỗ (`/internal/**`). |
 | **`registration-service`** | Registration Management | `8083` | `registration_db` | Quản lý thông tin đăng ký học phần, kiểm tra trùng môn, tự xác thực JWT, gọi HTTP REST nội bộ sang `course-service` để giữ/trả chỗ tự động, cập nhật trạng thái (`DA_DANG_KY`, `DA_HUY`). |
 
@@ -145,7 +145,7 @@ crs-microservices/
 ### 2. Mô hình Bảo mật 2 Tầng (2-Layer Security)
 - **Tầng 1 - API Gateway**:
   - `AuthHeaderFilter`: Kiểm tra sự tồn tại của header `Authorization` đối với các protected routes (`POST/PUT/DELETE /api/courses`, `/api/registrations/**`). Trả về ngay `401 Unauthorized` nếu thiếu.
-  - `ApiKeyFilter`: Kiểm tra header `X-API-KEY` đối với route tích hợp đối tác `/api/public/courses`. Trả về ngay `403 Forbidden` nếu thiếu hoặc sai key.
+  - `ApiKeyFilter`: Kiểm tra động header `X-API-KEY` qua `auth-service`, có cache 30 giây và fail-safe. Route danh sách cần scope `courses:read`; route chi tiết cần `courses:read-detail`. Key thiếu, hết hạn, bị thu hồi hoặc không xác thực được đều nhận `403 Forbidden`.
   - *Gateway không thực hiện giải mã chi tiết nội dung JWT để duy trì hiệu năng cao.*
 - **Tầng 2 - Business Microservices (`course-service`, `registration-service`)**:
   - Mỗi service được trang bị `JwtAuthFilter` riêng để tự giải mã chữ ký HMAC-SHA256, kiểm tra tính hợp lệ và trích xuất `username`/`role`.
@@ -174,7 +174,11 @@ Tất cả các yêu cầu từ Client gửi tới Gateway `:8080` sẽ được
 | `POST /api/registrations` | `http://localhost:8083/registrations` | `POST` | Gateway: Cần `Authorization`<br>Registration-service: Authenticated (`ADMIN`/`STUDENT`) |
 | `GET /api/registrations/student/{id}` | `http://localhost:8083/registrations/student/{id}` | `GET` | Gateway: Cần `Authorization`<br>Registration-service: Authenticated |
 | `DELETE /api/registrations/{id}` | `http://localhost:8083/registrations/{id}` | `DELETE` | Gateway: Cần `Authorization`<br>Registration-service: Authenticated |
-| `GET /api/public/courses` | `http://localhost:8082/courses` | `GET` | Yêu cầu Header `X-API-KEY: crs-partner-key-2026` |
+| `GET /api/api-keys` | `http://localhost:8081/api-keys` | `GET` | JWT Role `ADMIN` |
+| `POST /api/api-keys` | `http://localhost:8081/api-keys` | `POST` | JWT Role `ADMIN` |
+| `DELETE /api/api-keys/{id}` | `http://localhost:8081/api-keys/{id}` | `DELETE` | JWT Role `ADMIN` |
+| `GET /api/public/courses` | `http://localhost:8082/courses` | `GET` | `X-API-KEY` hợp lệ, scope `courses:read` |
+| `GET /api/public/courses/{id}` | `http://localhost:8082/courses/{id}` | `GET` | `X-API-KEY` hợp lệ, scope `courses:read-detail` |
 
 ### 2. Cấu hình CORS WebFlux
 API Gateway đã được cấu hình CORS toàn cục để cho phép Frontend Single Page Application (chạy tại `http://localhost:5173`) gọi API an toàn:
@@ -190,6 +194,7 @@ API Gateway đã được cấu hình CORS toàn cục để cho phép Frontend 
 
 ### 1. Nhóm Xác thực (`auth-service`)
 - `POST /api/auth/login`: Nhận `{ username, password }`, phản hồi `{ token, username, role }`.
+- `GET/POST/DELETE /api/api-keys`: ADMIN xem, cấp và thu hồi API Key đối tác qua Gateway.
 
 ### 2. Nhóm Môn học (`course-service`)
 - `GET /api/courses`: Danh sách môn học có phân trang và tìm kiếm theo `keyword`, `page`, `size`, `sort`.
@@ -204,7 +209,8 @@ API Gateway đã được cấu hình CORS toàn cục để cho phép Frontend 
 - `DELETE /api/registrations/{id}`: Hủy đăng ký học phần (Tự động hoàn trả 1 chỗ tại `course-service`, chuyển trạng thái thành `DA_HUY`).
 
 ### 4. Nhóm Đối tác & Nội bộ (Partner & Internal)
-- `GET /api/public/courses`: API cho đối tác, yêu cầu Header `X-API-KEY`.
+- `GET /api/public/courses`: API cho đối tác, yêu cầu key có scope `courses:read`.
+- `GET /api/public/courses/{id}`: API chi tiết cho đối tác, yêu cầu key có scope `courses:read-detail`.
 - `PATCH /internal/courses/{id}/reserve-seat`: API nội bộ trừ chỗ khi đăng ký.
 - `PATCH /internal/courses/{id}/release-seat`: API nội bộ hoàn chỗ khi hủy đăng ký.
 
@@ -269,8 +275,6 @@ REGISTRATION_SERVICE_PORT=8083
 JWT_SECRET=crs_microservices_secret_key_2026_0123456789_super_secure
 JWT_EXPIRATION=86400000
 
-# Khóa bí mật cho API Đối tác
-PARTNER_API_KEY=crs-partner-key-2026
 ```
 
 ### 2. Cấu hình Frontend (Tệp `crs-frontend/.env`)
@@ -436,10 +440,10 @@ Dưới đây là các test case mẫu kiểm thử đầy đủ các luồng b�
 - **Header**: `Authorization: Bearer <STUDENT_JWT_TOKEN>`
 - **Kết quả mong đợi**: Mã `200 OK`, trạng thái chuyển sang `DA_HUY`. Kiểm tra môn học thấy `soChoConLai` tăng lại 1.
 
-### 8. Gọi API Đối tác với API Key hợp lệ
+### 8. Gọi API Đối tác với API Key động hợp lệ
 - **Request**: `GET http://localhost:8080/api/public/courses`
-- **Header**: `X-API-KEY: crs-partner-key-2026`
-- **Kết quả mong đợi**: Mã `200 OK`. (Nếu không truyền header hoặc sai key sẽ nhận mã `403 Forbidden`).
+- **Header**: `X-API-KEY: <API_KEY_DUOC_ADMIN_CAP>`
+- **Kết quả mong đợi**: Mã `200 OK` khi key đang `ACTIVE`, chưa hết hạn và có scope `courses:read`; các trường hợp khác nhận `403 Forbidden`.
 
 ---
 
