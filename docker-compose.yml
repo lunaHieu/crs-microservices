@@ -88,7 +88,7 @@ services:
       REGISTRATION_SERVICE_BASE_URL: http://registration-service:8083
       FRONTEND_ORIGIN: http://localhost:5173
       JWT_SECRET: ${JWT_SECRET}
-      PARTNER_API_KEY: ${PARTNER_API_KEY:-crs-partner-key-2026}
+
     ports:
       - "18080:8080"
     depends_on:

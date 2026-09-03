@@ -45,13 +45,27 @@ spring:
               filters:
                 - RewritePath=/api/registrations/(?<segment>.*), /registrations/${segment}
 
-            - id: course-service-partner
+            - id: course-service-partner-list
               uri: ${COURSE_SERVICE_BASE_URL:http://localhost:8082}
               predicates:
                 - Path=/api/public/courses
               filters:
                 - RewritePath=/api/public/courses, /courses
 
+            - id: course-service-partner-detail
+              uri: ${COURSE_SERVICE_BASE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/public/courses/**
+              filters:
+                - RewritePath=/api/public/courses/(?<segment>.*), /courses/${segment}
+
+            - id: auth-service-api-keys
+              uri: ${AUTH_SERVICE_BASE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/api-keys,/api/api-keys/**
+              filters:
+                - RewritePath=/api/api-keys/(?<segment>.*), /api-keys/${segment}
+                - RewritePath=/api/api-keys, /api-keys
           globalcors:
             add-to-simple-url-handler-mapping: true
             cors-configurations:
@@ -71,8 +85,9 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:CRS-Microservices-Secret-Key-Nam-4-Hoc-Ky-2026-Doi-Trong-Thuc-Te}
-partner:
-  api-key: ${PARTNER_API_KEY:crs-partner-key-2026}
+
+auth-service:
+  base-url: ${AUTH_SERVICE_BASE_URL:http://localhost:8081}
 
 management:
   endpoints:
